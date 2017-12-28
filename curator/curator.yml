@@ -1,0 +1,4 @@
+---
+client:
+    hosts:
+        - ${ELASTICSEARCH_HOST:localhost}

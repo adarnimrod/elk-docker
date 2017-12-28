@@ -1,0 +1,2 @@
+0 1 * * * /usr/local/bin/curator --config /etc/curator.yml /actions.yml
+30 * * * * /usr/local/bin/curator-disk-space

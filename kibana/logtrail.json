@@ -1,0 +1,77 @@
+{
+  "version" : 1,
+  "index_patterns" : [
+    {
+      "es": {
+        "default_index": "logstash-gelf-*"
+      },
+      "tail_interval_in_seconds": 10,
+      "es_index_time_offset_in_seconds": 0,
+      "display_timezone": "local",
+      "display_timestamp_format": "MMM DD HH:mm:ss",
+      "max_buckets": 500,
+      "default_time_range_in_days" : 0,
+      "max_hosts": 100,
+      "max_events_to_keep_in_viewer": 5000,
+      "fields" : {
+        "mapping" : {
+            "timestamp" : "@timestamp",
+            "hostname" : "host",
+            "program": "container_name",
+            "message": "message"
+        },
+        "message_format": "{{{message}}}"
+      },
+      "color_mapping" : {
+      }
+    },
+    {
+      "es": {
+        "default_index": "logstash-http-*"
+      },
+      "tail_interval_in_seconds": 10,
+      "es_index_time_offset_in_seconds": 0,
+      "display_timezone": "local",
+      "display_timestamp_format": "MMM DD HH:mm:ss",
+      "max_buckets": 500,
+      "default_time_range_in_days" : 0,
+      "max_hosts": 100,
+      "max_events_to_keep_in_viewer": 5000,
+      "fields" : {
+        "mapping" : {
+            "timestamp" : "@timestamp",
+            "hostname" : "headers.http_host",
+            "program": "headers.request_uri",
+            "message": "message"
+        },
+        "message_format": "{{{message}}}"
+      },
+      "color_mapping" : {
+      }
+    },
+    {
+      "es": {
+        "default_index": "logstash-beats-*"
+      },
+      "tail_interval_in_seconds": 10,
+      "es_index_time_offset_in_seconds": 0,
+      "display_timezone": "local",
+      "display_timestamp_format": "MMM DD HH:mm:ss",
+      "max_buckets": 500,
+      "default_time_range_in_days" : 0,
+      "max_hosts": 100,
+      "max_events_to_keep_in_viewer": 5000,
+      "fields" : {
+        "mapping" : {
+            "timestamp" : "@timestamp",
+            "hostname" : "beat.hostname",
+            "program": "source",
+            "message": "message"
+        },
+        "message_format": "{{{message}}}"
+      },
+      "color_mapping" : {
+      }
+    }
+  ]
+}

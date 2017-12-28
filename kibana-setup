@@ -1,0 +1,56 @@
+#!/bin/sh
+set -eu
+
+command -v curl>/dev/null || { echo "Can't find curl, exiting."; exit 1; }
+[ -n "${KIBANA_HOST:-}" ] || { echo "KIBANA_HOST is not specified, exiting."; exit 1; }
+
+alias curl="curl --verbose \
+                 --fail \
+                 -H 'Accept: application/json, text/plain, */*' \
+                 --compressed \
+                 --retry-delay 2 \
+                 --retry 99 \
+                 -H 'Content-Type: application/json;charset=utf-8' \
+                 -H 'kbn-xsrf: something'"
+
+
+echo 'Create the logstash-* index pattern.'
+while ! curl \
+    "http://$KIBANA_HOST:5601/api/saved_objects/index-pattern/logstash?overwrite=true" \
+    --data '{"attributes":{"title":"logstash-*","timeFieldName":"@timestamp"}}'
+do
+    sleep 2
+done
+
+echo 'Create the logstash-gelf-* index pattern.'
+while ! curl \
+    "http://$KIBANA_HOST:5601/api/saved_objects/index-pattern/logstash-gelf?overwrite=true" \
+    --data '{"attributes":{"title":"logstash-gelf-*","timeFieldName":"@timestamp"}}'
+do
+    sleep 2
+done
+
+echo 'Create the logstash-http-* index pattern.'
+while ! curl \
+    "http://$KIBANA_HOST:5601/api/saved_objects/index-pattern/logstash-http?overwrite=true" \
+    --data '{"attributes":{"title":"logstash-http-*","timeFieldName":"@timestamp"}}'
+do
+    sleep 2
+done
+
+echo 'Create the logstash-beats-* index pattern.'
+while ! curl \
+    "http://$KIBANA_HOST:5601/api/saved_objects/index-pattern/logstash-beats?overwrite=true" \
+    --data '{"attributes":{"title":"logstash-beats-*","timeFieldName":"@timestamp"}}'
+do
+    sleep 2
+done
+
+echo 'Set the logstash-* index pattern as default.'
+while ! curl \
+    "http://$KIBANA_HOST:5601/api/kibana/settings/defaultIndex?overwrite=true" \
+    --data '{"value":"logstash"}'
+do
+    sleep 2
+done
+echo

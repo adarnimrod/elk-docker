@@ -1,0 +1,40 @@
+---
+heartbeat:
+    monitors:
+        - name: Elasticsearch
+          type: http
+          schedule: "@every 1m"
+          urls:
+              - "http://${ELASTICSEARCH_HOST}:9200/_cat/health"
+        - name: Kibana
+          type: http
+          schedule: '@every 1m'
+          urls:
+              - "http://${KIBANA_HOST}:5601/"
+        - name: Logstash HTTP
+          type: http
+          schedule: '@every 1m'
+          urls:
+              - "http://${LOGSTASH_HOST}:9600/?pretty"
+              - "http://${LOGSTASH_HOST}:9600/_node/"
+        - name: Logstash TCP
+          type: tcp
+          schedule: '@every 1m'
+          hosts:
+              - "${LOGSTASH_HOST}"
+          ports:
+              - 5044
+              - 8080
+output:
+    elasticsearch:
+        hosts:
+            - "${ELASTICSEARCH_HOST}:9200"
+system:
+    hostfs: /hostfs
+setup:
+    kibana:
+        host: "${KIBANA_HOST}"
+    dashboards:
+        enabled: True
+    template:
+        overwrite: true

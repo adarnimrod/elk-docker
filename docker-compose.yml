@@ -1,0 +1,181 @@
+---
+version: '3'
+services:
+    metricbeat:
+        image: docker.elastic.co/beats/metricbeat:${VERSION}
+        volumes: &metricbeat_volumes
+            - /:/hostfs:ro
+            - /proc:/hostfs/proc:ro
+            - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+            - /var/run/docker.sock:/hostfs/var/run/docker.sock
+            - ./metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+            - ./metricbeat-entrypoint:/usr/local/bin/metricbeat-entrypoint:ro
+        depends_on:
+            - elasticsearch
+            - kibana
+            - metricbeat_setup
+            - logstash
+        healthcheck:
+            test: ["CMD", "pgrep", "metricbeat"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+        environment:
+            KIBANA_HOST: localhost
+            ELASTICSEARCH_HOST: localhost
+            LOGSTASH_HOST: localhost
+        network_mode: host
+        pid: host
+        restart: always
+        user: root
+        entrypoint:
+            - /usr/local/bin/metricbeat-entrypoint
+        command:
+            - -e
+        logging: &logging
+            driver: gelf
+            options:
+                gelf-address: "udp://localhost:12201"
+    metricbeat_setup:
+        image: docker.elastic.co/beats/metricbeat:${VERSION}
+        environment: &environment
+            KIBANA_HOST: kibana
+            ELASTICSEARCH_HOST: elasticsearch
+            LOGSTASH_HOST: logstash
+        links:
+            - elasticsearch
+            - kibana
+            - logstash
+        volumes: *metricbeat_volumes
+        command: metricbeat setup -e
+        restart: on-failure
+        logging: *logging
+    heartbeat:
+        image: docker.elastic.co/beats/heartbeat:${VERSION}
+        environment: *environment
+        links:
+            - elasticsearch
+            - kibana
+            - logstash
+        depends_on:
+            - heartbeat_setup
+        volumes:
+            - ./heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro
+        healthcheck:
+            test: ["CMD", "pgrep", "heartbeat"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+        restart: always
+        logging: *logging
+    heartbeat_setup:
+        image: docker.elastic.co/beats/heartbeat:${VERSION}
+        environment: *environment
+        links:
+            - elasticsearch
+            - kibana
+        volumes:
+            - ./heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro
+        command: heartbeat setup -e
+        restart: on-failure
+        logging: *logging
+    elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch-oss:${VERSION}
+        environment:
+            <<: *environment
+            'cluster.name': mobile
+            'discovery.type': 'single-node'
+            'ES_JAVA_OPTS': '-Xms2g -Xmx2g'
+        healthcheck:
+            test: ["CMD", "curl", "--fail", "http://localhost:9200/_cat/health"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+        volumes:
+            - ./data:/usr/share/elasticsearch/data
+        ulimits:
+            nproc: 4096
+            nofile:
+                soft: 65536
+                hard: 65536
+        #sysctls:
+        #    vm.max_map_count: 262144
+        restart: always
+        logging: *logging
+        ports:
+            - '9200:9200'
+    logstash:
+        image: docker.elastic.co/logstash/logstash-oss:${VERSION}
+        command: logstash -e "input { http { add_field => { 'input' => 'http' } } beats { port => 5044 add_field => { 'input' => 'beats' } } gelf { add_field => { 'input' => 'gelf' } } } output { elasticsearch { hosts => [ 'elasticsearch' ] index => 'logstash-%{[input]}-%{+YYYY.MM.dd}' }}" --path.settings="" --http.host="0.0.0.0"
+        links:
+            - elasticsearch
+        ports:
+            - 8080:8080
+            - 5044:5044
+            - 12201:12201/udp
+        healthcheck:
+            test: ["CMD", "curl", "--fail", "http://localhost:9600/_node"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+        restart: always
+        logging: *logging
+        expose:
+            - "8080"
+            - "5044"
+            - "9600"
+            - "12201"
+    kibana:
+        build:
+            context: ./kibana
+            args:
+                KIBANA_VERSION: "${VERSION}"
+                LOGTRAIL_VERSION: "0.1.24"
+        links:
+            - elasticsearch
+        ports:
+            - 5601:5601
+        healthcheck:
+            test: ["CMD", "curl", "--fail", "http://localhost:5601/"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+        restart: always
+        logging: *logging
+        environment:
+            <<: *environment
+            ELASTICSEARCH_URL: http://elasticsearch:9200
+            STATUS_ALLOWANONYMOUS: 'True'
+            SERVER_HOST: 0.0.0.0
+    kibana_setup:
+        image: centos:7
+        links:
+            - kibana
+        restart: on-failure
+        logging: *logging
+        volumes:
+            - ./kibana-setup:/usr/local/bin/kibana-setup:ro
+        command: /usr/local/bin/kibana-setup
+        environment: *environment
+    curator:
+        image: adarnimrod/curator
+        #build:
+        #    context: ./curator
+        links:
+            - elasticsearch
+        healthcheck:
+            test: ["CMD", "pgrep", "crond"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+        restart: always
+        logging: *logging
+        environment:
+            <<: *environment
+            CURATOR_DISK_SPACE_PERCENT: 20
+        volumes:
+            - ./data:/usr/share/elasticsearch/data:ro
+            - ./curator/actions.yml:/actions.yml:ro
+            - ./curator/curator.yml:/etc/curator.yml:ro
+            - ./curator/crontab:/var/spool/cron/crontabs/nobody:ro
+            - ./curator/curator-disk-space:/usr/local/bin/curator-disk-space:ro

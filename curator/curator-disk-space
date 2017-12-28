@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+[ -n "${CURATOR_DISK_SPACE_PERCENT:-}" ] || { echo "Free disk space percent wasn't set, exiting." > /dev/stderr; exit 1; }
+
+disk_size="$( df -Pk /usr/share/elasticsearch/data | awk 'NR==2 {print $2}' )"
+disk_avail="$( df -Pk /usr/share/elasticsearch/data | awk 'NR==2 {print $4}' )"
+threshold="$((  disk_size * CURATOR_DISK_SPACE_PERCENT ))"
+
+[ "$threshold" -lt "$disk_avail" ] || { echo "Enough disk space, skipping curator run." > /dev/stderr; exit; }
+
+# Assuming the usage is mainly (all) by Elasticsearch.
+export CURATROR_DISK_SPACE="$(( (threshold - disk_avail) / (1024*1024) ))"
+exec curator_cli --config /etc/curator.yml \
+                 delete_indices \
+                 --ignore_empty_list \
+                 --filter_list "[{\"filtertype\": \"pattern\",
+                                  \"kind\": \"timestring\",
+                                  \"value\": \"%Y.%m.%d\"},
+                                 {\"filtertype\": \"space\",
+                                  \"use_age\": true,
+                                  \"disk_space\": $CURATROR_DISK_SPACE}]"

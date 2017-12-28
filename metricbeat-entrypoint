@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+[ "$(whoami)" = "root" ] || { echo "Not running as root, exiting." >> /dev/stderr; exit 1; }
+
+gid="$(stat --format='%g' /hostfs/var/run/docker.sock)"
+groupadd --force --non-unique --gid "$gid" docker
+usermod --append --groups docker metricbeat
+eval "exec su -pc '/usr/local/bin/docker-entrypoint $@' metricbeat"

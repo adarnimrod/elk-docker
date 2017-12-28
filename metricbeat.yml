@@ -1,0 +1,58 @@
+---
+metricbeat:
+    modules:
+        - module: docker
+          metricsets:
+              - container
+              - cpu
+              - diskio
+              - healthcheck
+              - info
+              - memory
+              - network
+          hosts:
+              - unix:///hostfs/var/run/docker.sock
+        - module: system
+          metricsets:
+              - core
+              - cpu
+              - diskio
+              - filesystem
+              - fsstat
+              - load
+              - memory
+              - network
+              - process
+              - process_summary
+              - socket
+              - uptime
+        - module: elasticsearch
+          metricsets:
+              - node
+              - node_stats
+          hosts:
+              - "${ELASTICSEARCH_HOST}:9200"
+        - module: kibana
+          metricsets:
+              - status
+          hosts:
+              - "${KIBANA_HOST}:5601"
+        - module: logstash
+          metricsets:
+              - node
+              - node_stats
+          hosts:
+              - "${LOGSTASH_HOST}"
+output:
+    elasticsearch:
+        hosts:
+            - "${ELASTICSEARCH_HOST}:9200"
+system:
+    hostfs: /hostfs
+setup:
+    kibana:
+        host: "${KIBANA_HOST}"
+    dashboards:
+        enabled: True
+    template:
+        overwrite: true
