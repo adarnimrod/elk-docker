@@ -113,6 +113,7 @@ services:
             - 8080:8080
             - 5044:5044
             - 12201:12201/udp
+            - 9600:9600
         healthcheck:
             test: ["CMD", "curl", "--fail", "http://localhost:9600/_node"]
             interval: 10s
