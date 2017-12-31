@@ -163,11 +163,6 @@ services:
         #    context: ./curator
         links:
             - elasticsearch
-        healthcheck:
-            test: ["CMD", "pgrep", "crond"]
-            interval: 10s
-            timeout: 3s
-            retries: 10
         restart: always
         logging: *logging
         environment:
