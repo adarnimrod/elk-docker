@@ -42,7 +42,7 @@ metricbeat:
               - node
               - node_stats
           hosts:
-              - "${LOGSTASH_HOST}"
+              - "${LOGSTASH_HOST}:9600"
 output:
     elasticsearch:
         hosts:
