@@ -131,7 +131,7 @@ services:
             context: ./kibana
             args:
                 KIBANA_VERSION: "${VERSION}"
-                LOGTRAIL_VERSION: "0.1.24"
+                LOGTRAIL_VERSION: "0.1.25"
         links:
             - elasticsearch
         ports:
