@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+crontab -u nobody /etc/crontabs/nobody
+eval exec "$@"
